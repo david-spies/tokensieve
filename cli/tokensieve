@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+#  TokenSieve CLI Wrapper
+#  Transparently routes LLM API calls through the local deduplication proxy.
+#
+#  Usage:
+#    ./cli/tokensieve <command>             # wrap any command
+#    ./cli/tokensieve claude code .         # Claude Code
+#    ./cli/tokensieve gemini --prompt "..."  # Gemini CLI
+#    source ./cli/tokensieve               # persist env in current shell
+#
+#  Environment Variables (optional, auto-detected):
+#    TOKENSIEVE_PORT      Proxy port (default: 8080)
+#    TOKENSIEVE_PROVIDER  anthropic | gemini | openai (default: anthropic)
+#    ANTHROPIC_API_KEY    Your Anthropic API key
+#    GEMINI_API_KEY       Your Google Gemini API key
+#    OPENAI_API_KEY       Your OpenAI API key
+# ─────────────────────────────────────────────────────────────────────────────
+set -euo pipefail
+
+TOKENSIEVE_PORT="${TOKENSIEVE_PORT:-8080}"
+TOKENSIEVE_PROVIDER="${TOKENSIEVE_PROVIDER:-anthropic}"
+PROXY_BASE="http://localhost:${TOKENSIEVE_PORT}"
+
+# ── Resolve API key ───────────────────────────────────────────────────────────
+resolve_key() {
+  case "$TOKENSIEVE_PROVIDER" in
+    gemini)   echo "${GEMINI_API_KEY:-}" ;;
+    openai)   echo "${OPENAI_API_KEY:-}" ;;
+    *)        echo "${ANTHROPIC_API_KEY:-}" ;;
+  esac
+}
+
+UPSTREAM_KEY="$(resolve_key)"
+
+if [[ -z "$UPSTREAM_KEY" ]]; then
+  echo "⚠️  Warning: no upstream API key found in environment."
+  echo "   Set ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY."
+fi
+
+# ── Health-check the proxy ────────────────────────────────────────────────────
+check_proxy() {
+  curl -sf --max-time 2 "${PROXY_BASE}/api/health" > /dev/null 2>&1
+}
+
+if ! check_proxy; then
+  echo "⚠️  TokenSieve proxy not running at ${PROXY_BASE}"
+  echo "   Start it with: docker-compose up -d proxy"
+  echo "   Or:            cd tokensieve && go run ./cmd/proxy/"
+  exit 1
+fi
+
+# ── Inject environment ────────────────────────────────────────────────────────
+export UPSTREAM_API_KEY="$UPSTREAM_KEY"
+export LLM_PROVIDER="$TOKENSIEVE_PROVIDER"
+
+# Anthropic SDK / Claude Code
+export ANTHROPIC_BASE_URL="${PROXY_BASE}"
+
+# OpenAI-compatible clients
+export OPENAI_BASE_URL="${PROXY_BASE}"
+
+# Gemini CLI
+export GEMINI_API_ENDPOINT="${PROXY_BASE}"
+
+# Generate a stable session ID for this terminal session
+if [[ -z "${TOKENSIEVE_SESSION_ID:-}" ]]; then
+  export TOKENSIEVE_SESSION_ID="$(echo "${USER:-anon}-$(hostname)-$$" | sha256sum | cut -c1-16)"
+fi
+
+echo "⚙️  TokenSieve active"
+echo "   Proxy:    ${PROXY_BASE}"
+echo "   Provider: ${TOKENSIEVE_PROVIDER}"
+echo "   Session:  ${TOKENSIEVE_SESSION_ID}"
+echo "   Dashboard: http://localhost:3000"
+echo ""
+
+# ── Execute wrapped command (if provided) ─────────────────────────────────────
+if [[ $# -gt 0 ]]; then
+  exec "$@"
+fi
+# If no args, environment is exported for use by the caller's shell (source mode).
