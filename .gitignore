@@ -1,0 +1,21 @@
+# Go
+/bin/
+*.exe
+*.test
+*.out
+
+# Node / UI
+ui/node_modules/
+ui/dist/
+ui/.env
+
+# Environment
+.env
+*.env.local
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
