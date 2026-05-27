@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #050810;
+  --color-surface: #0c1120;
+  --color-border: #1a2540;
+  --color-border-bright: #253060;
+  --color-accent: #00d4a8;
+  --color-accent-dim: rgba(0, 212, 168, 0.12);
+  --color-accent-border: rgba(0, 212, 168, 0.25);
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-text: #e2e8f0;
+  --color-muted: #64748b;
+  --color-subtle: #334155;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-subtle); border-radius: 3px; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 168, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(0, 212, 168, 0); }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+  font-size: 0.75em;
+  color: var(--color-accent);
+}
+
+.glow-accent { text-shadow: 0 0 20px rgba(0, 212, 168, 0.5); }
+.border-glow { box-shadow: 0 0 0 1px var(--color-accent-border), inset 0 0 20px rgba(0, 212, 168, 0.03); }
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0,212,168,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,168,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
